@@ -55,3 +55,6 @@ class AudioData:
             ),
             atype=atype,
         )
+
+    def to_google_segment(self):
+        return {"data": self.data.raw_data, "mime_type": "audio/pcm"}

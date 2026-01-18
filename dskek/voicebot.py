@@ -47,8 +47,9 @@ class VoiceBot(discord.AudioSource, voice_recv.AudioSink):
         # return chunk
     
     def read(self):
-        chunk: AudioData = self.stream.audio_out_queue.get_nowait()
-        return chunk.data.raw_data
+        if not self.stream.audio_out_queue.empty():
+            chunk: AudioData = self.stream.audio_out_queue.get_nowait()
+            return chunk.data.raw_data
 
 
     def write(self, user: discord.Member, data: voice_recv.VoiceData):

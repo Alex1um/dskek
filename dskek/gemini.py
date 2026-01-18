@@ -68,9 +68,9 @@ CONFIG = types.LiveConnectConfig(
     ),
 )
 
+
 class AudioLoop:
     def __init__(self, in_queue: asyncio.Queue, out_queue: asyncio.Queue):
-
         self.in_queue = in_queue
         self.out_queue = out_queue
 
@@ -98,7 +98,7 @@ class AudioLoop:
     async def send_realtime(self):
         while True:
             msg: AudioData = await self.in_queue.get()
-            msg = msg.convert(AudioType.GEMINI_SEND).data.raw_data
+            msg = msg.convert(AudioType.GEMINI_SEND).to_google_segment()
             match msg:
                 case str():
                     await self.session.send(input=msg, end_of_turn=True)
@@ -111,7 +111,11 @@ class AudioLoop:
             turn = self.session.receive()
             async for response in turn:
                 if data := response.data:
-                    self.out_queue.put_nowait(AudioData.from_raw(data=data, atype=AudioType.GEMINI_RECEIVE))
+                    self.out_queue.put_nowait(
+                        AudioData.from_raw(
+                            data=data, atype=AudioType.GEMINI_RECEIVE
+                        )
+                    )
                     continue
                 # if text := response.text:
                 #     self.out_queue.put_nowait(text)

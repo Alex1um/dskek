@@ -9,8 +9,9 @@ class Stream:
         self.audio_out_queue = asyncio.Queue()
 
     def cleanup(self):
-        self.audio_in_queue.shutdown()
-        self.audio_out_queue.shutdown()
+        # self.audio_in_queue.shutdown()
+        # self.audio_out_queue.shutdown()
+        pass
 
 
 class StreamController:
