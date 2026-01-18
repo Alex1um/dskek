@@ -7,6 +7,7 @@ import discord
 import asyncio
 import logging
 import traceback
+import time
 
 
 logger = logging.getLogger("discord")
@@ -18,6 +19,8 @@ class VoiceBot(discord.AudioSource, voice_recv.AudioSink):
         voice_recv.AudioSink.__init__(self)
         self.stream = Stream()
         self.audio = AudioLoop(self.stream)
+        self.write_time = time.time()
+        self.write_bytes = 0
         # self.audio_buffer = b""
 
     async def run(self):
@@ -55,10 +58,15 @@ class VoiceBot(discord.AudioSource, voice_recv.AudioSink):
 
     def write(self, user: discord.Member, data: voice_recv.VoiceData):
         if user:
-            # logger.debug(f"Bot is writing {len(data.pcm)} bytes of audio")
             self.stream.audio_in_queue.put_nowait(
                 AudioData.from_raw(data=data.pcm, atype=AudioType.DISCORD)
             )
+            if time.time() - self.write_time > 10:
+                logger.info(
+                    f"Bot has written {self.write_bytes=} of audio over 10s"
+                )
+                self.write_time = time.time()
+                self.write_bytes = 0
 
     def cleanup(self):
         self.stream.cleanup()

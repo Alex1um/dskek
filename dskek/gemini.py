@@ -28,6 +28,7 @@ from dskek.models import QueueData, AudioData, AudioType
 from dskek.converters import AudioData, AudioType
 from dskek.channels import Stream
 from pydub import AudioSegment
+import time
 import logging
 
 # CHANNELS = 1
@@ -107,15 +108,21 @@ class AudioLoop:
 
     async def send_realtime(self):
         logger.info("Gemini starting send_realtime")
+        millis = 0
+        t = time.time()
         while True:
             msg: AudioData = self.in_queue.get()
-            logger.info(f"Received {len(msg.data.raw_data)} bytes of audio")
+            millis += len(msg.data)
             msg_converted = msg.convert(AudioType.GEMINI_SEND).to_google_segment()
-            logger.info(f"Converted to {len(msg.data.raw_data)} bytes of audio")
             await self.session.send(input=msg_converted)
+            if time.time() - t > 10:
+                logger.info(f"Gemini received {millis=} of audio over 10s")
+                millis = 0
+                t = time.time()
 
     async def receive_audio(self):
         "Background task to reads from the websocket and write pcm chunks to the output queue"
+        logger.info("Gemini starting receive_audio")
         while True:
             turn = self.session.receive()
             async for response in turn:
@@ -127,15 +134,15 @@ class AudioLoop:
                         )
                     )
                     continue
-                # if text := response.text:
-                #     self.out_queue.put_nowait(text)
+                if text := response.text:
+                    logger.info(f"Received text from gemini: {text}")
 
             # # If you interrupt the model, it sends a turn_complete.
             # # For interruptions to work, we need to stop playback.
             # # So empty out the audio queue because it may have loaded
             # # much more audio than has played yet.
-            while not self.out_queue.empty():
-                self.out_queue.get_nowait()
+            # while not self.out_queue.empty():
+            #     self.out_queue.get_nowait()
 
     async def run(self):
         try:
