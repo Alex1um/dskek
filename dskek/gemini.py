@@ -26,11 +26,17 @@ from google import genai
 from google.genai import types
 from dskek.models import QueueData, AudioData, AudioType
 from dskek.converters import AudioData, AudioType
+from pydub import AudioSegment
+import logging
 
 # CHANNELS = 1
 # SEND_SAMPLE_RATE = 16000
 # RECEIVE_SAMPLE_RATE = 24000
 # CHUNK_SIZE = 1024
+
+
+logger = logging.getLogger(__name__)
+
 
 MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
 
@@ -82,9 +88,11 @@ class AudioLoop:
         self.play_audio_task = None
 
     async def send_text(self, text: str):
+        logging.info(f"Sending text: {text}")
         await self.in_queue.put(text or ".")
 
     async def send_image(self, img: Image):
+        logging.info("Sending image")
         img.thumbnail([1024, 1024])
 
         image_io = io.BytesIO()
@@ -99,12 +107,10 @@ class AudioLoop:
     async def send_realtime(self):
         while True:
             msg: AudioData = await self.in_queue.get()
-            msg = msg.convert(AudioType.GEMINI_SEND).to_google_segment()
-            match msg:
-                case str():
-                    await self.session.send(input=msg, end_of_turn=True)
-                case _:
-                    await self.session.send(input=msg)
+            logging.info(f"Received {len(msg.data.raw_data)} bytes of audio")
+            msg_converted = msg.convert(AudioType.GEMINI_SEND).to_google_segment()
+            logging.info(f"Converted to {len(msg.data.raw_data)} bytes of audio")
+            await self.session.send(input=msg_converted)
 
     async def receive_audio(self):
         "Background task to reads from the websocket and write pcm chunks to the output queue"
@@ -112,6 +118,7 @@ class AudioLoop:
             turn = self.session.receive()
             async for response in turn:
                 if data := response.data:
+                    logging.info(f"Received {len(data)} bytes of audio from gemini")
                     self.out_queue.put_nowait(
                         AudioData.from_raw(
                             data=data, atype=AudioType.GEMINI_RECEIVE
@@ -145,6 +152,8 @@ class AudioLoop:
                 # raise asyncio.CancelledError("User requested exit")
 
         except asyncio.CancelledError:
+            logger.info("User requested exit")
             pass
         except ExceptionGroup as EG:
-            traceback.print_exception(EG)
+            logger.error(f"An error occurred in the Gemini stream: {EG}")
+            # traceback.print_exception(EG)
