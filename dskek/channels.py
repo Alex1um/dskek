@@ -6,8 +6,10 @@ import culsans
 
 class Stream:
     def __init__(self):
-        self.audio_in_queue = culsans.AsyncQueue()
-        self.audio_out_queue = culsans.AsyncQueue()
+        self._in_queue = culsans.Queue()
+        self._out_queue = culsans.Queue()
+        self.audio_in_queue = self._in_queue.async_q
+        self.audio_out_queue = self._out_queue.sync_q
 
     def cleanup(self):
         # self.audio_in_queue.shutdown()

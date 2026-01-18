@@ -54,17 +54,17 @@ CONFIG = types.LiveConnectConfig(
     response_modalities=[
         "AUDIO",
     ],
-    # media_resolution="MEDIA_RESOLUTION_LOW",
-    media_resolution="MEDIA_RESOLUTION_MEDIUM",
+    media_resolution="MEDIA_RESOLUTION_LOW",
+    # media_resolution="MEDIA_RESOLUTION_MEDIUM",
     speech_config=types.SpeechConfig(
         voice_config=types.VoiceConfig(
             prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Zephyr")
         )
     ),
-    # context_window_compression=types.ContextWindowCompressionConfig(
-    #     trigger_tokens=25600,
-    #     sliding_window=types.SlidingWindow(target_tokens=12800),
-    # ),
+    context_window_compression=types.ContextWindowCompressionConfig(
+        trigger_tokens=25600,
+        sliding_window=types.SlidingWindow(target_tokens=12800),
+    ),
     tools=tools,
     system_instruction=types.Content(
         parts=[
@@ -126,11 +126,9 @@ class AudioLoop:
             turn = self.session.receive()
             async for response in turn:
                 if data := response.data:
-                    logger.info(f"Received {len(data)} bytes of audio from gemini")
+                    # logger.info(f"Received {len(data)} bytes of audio from gemini")
                     self.out_queue.put_nowait(
-                        AudioData.from_raw(
-                            data=data, atype=AudioType.GEMINI_RECEIVE
-                        )
+                        AudioData.from_raw(data=data, atype=AudioType.GEMINI_RECEIVE)
                     )
                     continue
                 if text := response.text:
@@ -163,5 +161,7 @@ class AudioLoop:
             logger.info("User requested exit")
             pass
         except ExceptionGroup as EG:
-            logger.error(f"An error occurred in the Gemini stream: {EG}\n{traceback.format_exc()}")
+            logger.error(
+                f"An error occurred in the Gemini stream: {EG}\n{traceback.format_exc()}"
+            )
             # traceback.print_exception(EG)
