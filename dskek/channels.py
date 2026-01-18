@@ -1,12 +1,13 @@
 import asyncio
 from collections import defaultdict
+import queue
 import janus
 
 
 class Stream:
     def __init__(self):
-        self.audio_in_queue = janus.AsyncQueue()
-        self.audio_out_queue = janus.AsyncQueue()
+        self.audio_in_queue = queue.Queue()
+        self.audio_out_queue = queue.Queue()
 
     def cleanup(self):
         # self.audio_in_queue.shutdown()
