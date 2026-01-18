@@ -6,6 +6,7 @@ from discord.ext import voice_recv, commands
 import discord
 import asyncio
 import logging
+import traceback
 
 
 logger = logging.getLogger("discord")
@@ -96,5 +97,5 @@ async def on_join(ctx: commands.Context):
         logging.info(f"Starting gemini stream for guild {guild_id}.")
         await gemini.run()
     except Exception as e:
-        logging.exception(e)
+        logging.exception(f"Bot error: {e}\n{traceback.format_exc()}")
         await ctx.reply(f"Exception: {e}")

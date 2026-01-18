@@ -156,5 +156,5 @@ class AudioLoop:
             logger.info("User requested exit")
             pass
         except ExceptionGroup as EG:
-            logger.error(f"An error occurred in the Gemini stream: {EG}")
+            logger.error(f"An error occurred in the Gemini stream: {EG}\n{traceback.format_exc()}")
             # traceback.print_exception(EG)
