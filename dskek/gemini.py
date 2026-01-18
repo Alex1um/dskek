@@ -47,16 +47,17 @@ CONFIG = types.LiveConnectConfig(
     response_modalities=[
         "AUDIO",
     ],
-    media_resolution="MEDIA_RESOLUTION_LOW",
+    # media_resolution="MEDIA_RESOLUTION_LOW",
+    media_resolution="MEDIA_RESOLUTION_MEDIUM",
     speech_config=types.SpeechConfig(
         voice_config=types.VoiceConfig(
             prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Zephyr")
         )
     ),
-    context_window_compression=types.ContextWindowCompressionConfig(
-        trigger_tokens=25600,
-        sliding_window=types.SlidingWindow(target_tokens=12800),
-    ),
+    # context_window_compression=types.ContextWindowCompressionConfig(
+    #     trigger_tokens=25600,
+    #     sliding_window=types.SlidingWindow(target_tokens=12800),
+    # ),
     tools=tools,
     system_instruction=types.Content(
         parts=[
