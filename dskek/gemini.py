@@ -26,6 +26,7 @@ from google import genai
 from google.genai import types
 from dskek.models import QueueData, AudioData, AudioType
 from dskek.converters import AudioData, AudioType
+from dskek.channels import Stream
 from pydub import AudioSegment
 import logging
 
@@ -77,9 +78,9 @@ CONFIG = types.LiveConnectConfig(
 
 
 class AudioLoop:
-    def __init__(self, in_queue: asyncio.Queue, out_queue: asyncio.Queue):
-        self.in_queue = in_queue
-        self.out_queue = out_queue
+    def __init__(self, stream: Stream):
+        self.in_queue = stream.audio_in_queue
+        self.out_queue = stream.audio_out_queue
 
         self.session = None
 

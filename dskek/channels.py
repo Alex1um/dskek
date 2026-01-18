@@ -5,8 +5,8 @@ import janus
 
 class Stream:
     def __init__(self):
-        self.audio_in_queue = asyncio.Queue()
-        self.audio_out_queue = asyncio.Queue()
+        self.audio_in_queue = janus.AsyncQueue()
+        self.audio_out_queue = janus.AsyncQueue()
 
     def cleanup(self):
         # self.audio_in_queue.shutdown()

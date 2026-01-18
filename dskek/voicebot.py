@@ -16,10 +16,8 @@ class VoiceBot(discord.AudioSource, voice_recv.AudioSink):
         discord.AudioSource.__init__(self)
         voice_recv.AudioSink.__init__(self)
         self.stream = Stream()
-        self.audio = AudioLoop(self.stream.audio_in_queue, self.stream.audio_out_queue)
-        self.audio_buffer: AudioData = AudioData.from_raw(
-            data=b"", atype=AudioType.DISCORD
-        )
+        self.audio = AudioLoop(self.stream)
+        # self.audio_buffer = b""
 
     async def run(self):
         await self.audio.run()
@@ -84,13 +82,18 @@ async def on_join(ctx: commands.Context):
         return
 
     try:
+        logging.info(f"Attempting to join voice channel for guild {guild_id}.")
         vc = await voice_channel.connect(cls=voice_recv.VoiceRecvClient)
 
+        logging.info(f"Joined voice channel for guild {guild_id}.")
         gemini = VoiceBot()
 
+        logging.info(f"Starting listen and play for guild {guild_id}.")
         vc.listen(gemini)
         vc.play(gemini)
 
+        await ctx.reply("Joined voice channel. Starting Gemini stream...")
+        logging.info(f"Starting gemini stream for guild {guild_id}.")
         await gemini.run()
     except Exception as e:
         logging.exception(e)
