@@ -1,0 +1,19 @@
+[project]
+name = "dskek"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp-socks>=0.11.0",
+    "discord-ext-voice-recv>=0.5.2a179",
+    "discord-py>=2.6.4",
+    "dotenv>=0.9.9",
+    "google-genai>=1.57.0",
+    "httpx[socks]>=0.28.1",
+    "janus>=2.0.0",
+    "pillow>=12.1.0",
+    "pydub>=0.25.1",
+    "python-socks>=2.8.0",
+    "types-pillow>=10.2.0.20240822",
+]
