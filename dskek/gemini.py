@@ -89,11 +89,11 @@ class AudioLoop:
         self.play_audio_task = None
 
     async def send_text(self, text: str):
-        logging.info(f"Sending text: {text}")
+        logger.info(f"Sending text: {text}")
         self.in_queue.put(text or ".")
 
     async def send_image(self, img: Image):
-        logging.info("Sending image")
+        logger.info("Sending image")
         img.thumbnail([1024, 1024])
 
         image_io = io.BytesIO()
@@ -106,11 +106,12 @@ class AudioLoop:
         self.in_queue.put(frame)
 
     async def send_realtime(self):
+        logger.info("Gemini starting send_realtime")
         while True:
             msg: AudioData = self.in_queue.get()
-            logging.info(f"Received {len(msg.data.raw_data)} bytes of audio")
+            logger.info(f"Received {len(msg.data.raw_data)} bytes of audio")
             msg_converted = msg.convert(AudioType.GEMINI_SEND).to_google_segment()
-            logging.info(f"Converted to {len(msg.data.raw_data)} bytes of audio")
+            logger.info(f"Converted to {len(msg.data.raw_data)} bytes of audio")
             await self.session.send(input=msg_converted)
 
     async def receive_audio(self):
@@ -119,7 +120,7 @@ class AudioLoop:
             turn = self.session.receive()
             async for response in turn:
                 if data := response.data:
-                    logging.info(f"Received {len(data)} bytes of audio from gemini")
+                    logger.info(f"Received {len(data)} bytes of audio from gemini")
                     self.out_queue.put_nowait(
                         AudioData.from_raw(
                             data=data, atype=AudioType.GEMINI_RECEIVE

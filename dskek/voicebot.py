@@ -70,7 +70,7 @@ async def on_join(ctx: commands.Context):
     if ctx.author == bot.user:
         return
     if not ctx.author.voice:
-        logging.info(f"User {ctx.author} is not connected to a voice channel.")
+        logger.info(f"User {ctx.author} is not connected to a voice channel.")
         await ctx.reply("You are not connected to a voice channel.")
         return
 
@@ -78,24 +78,24 @@ async def on_join(ctx: commands.Context):
     guild_id = ctx.guild.id
 
     if guild_id in bot.voice_clients:
-        logging.info(f"Bot is already in a voice channel for guild {guild_id}.")
+        logger.info(f"Bot is already in a voice channel for guild {guild_id}.")
         await ctx.reply("I'm already in a voice channel.")
         return
 
     try:
-        logging.info(f"Attempting to join voice channel for guild {guild_id}.")
+        logger.info(f"Attempting to join voice channel for guild {guild_id}.")
         vc = await voice_channel.connect(cls=voice_recv.VoiceRecvClient)
 
-        logging.info(f"Joined voice channel for guild {guild_id}.")
+        logger.info(f"Joined voice channel for guild {guild_id}.")
         gemini = VoiceBot()
 
-        logging.info(f"Starting listen and play for guild {guild_id}.")
+        logger.info(f"Starting listen and play for guild {guild_id}.")
         vc.listen(gemini)
         vc.play(gemini)
 
         await ctx.reply("Joined voice channel. Starting Gemini stream...")
-        logging.info(f"Starting gemini stream for guild {guild_id}.")
+        logger.info(f"Starting gemini stream for guild {guild_id}.")
         await gemini.run()
     except Exception as e:
-        logging.exception(f"Bot error: {e}\n{traceback.format_exc()}")
+        logger.exception(f"Bot error: {e}\n{traceback.format_exc()}")
         await ctx.reply(f"Exception: {e}")
