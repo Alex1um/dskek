@@ -17,40 +17,41 @@ class VoiceBot(discord.AudioSource, voice_recv.AudioSink):
         voice_recv.AudioSink.__init__(self)
         self.stream = Stream()
         self.audio = AudioLoop(self.stream.audio_in_queue, self.stream.audio_out_queue)
-        self.audio_buffer: AudioData = AudioData.from_raw(data=b"", atype=AudioType.DISCORD)
+        self.audio_buffer: AudioData = AudioData.from_raw(
+            data=b"", atype=AudioType.DISCORD
+        )
 
     async def run(self):
         await self.audio.run()
 
     def wants_opus(self):
         return False
-    
+
     def is_opus(self):
         return False
 
     # def read(self):
-        # if not self.audio_buffer:
-        #     nxt: AudioData = self.stream.audio_out_queue.get_nowait()
-        #     self.audio_buffer = nxt.convert(AudioType.DISCORD)
-        # discord_chunk_size = AudioType.DISCORD.value.chunk_size
-        # if len(self.audio_buffer.data.raw_data) < discord_chunk_size:
-        #     if self.stream.audio_out_queue.empty():
-        #         silence = AudioData.from_raw(data=b"\x00" * (
-        #             discord_chunk_size - len(self.audio_buffer.data.raw_data)
-        #         ), atype=AudioType.DISCORD)
-        #         self.audio_buffer.data.append(silence.data, crossfade=0)
-        #     else:
-        # nxt: AudioData = self.stream.audio_out_queue.get_nowait()
-        # self.audio_buffer.data.append(nxt.convert(AudioType.DISCORD).data, crossfade=0)
-        # chunk = self.audio_buffer[:discord_chunk_size]
-        # self.audio_buffer = self.audio_buffer[discord_chunk_size:]
-        # return chunk
-    
+    # if not self.audio_buffer:
+    #     nxt: AudioData = self.stream.audio_out_queue.get_nowait()
+    #     self.audio_buffer = nxt.convert(AudioType.DISCORD)
+    # discord_chunk_size = AudioType.DISCORD.value.chunk_size
+    # if len(self.audio_buffer.data.raw_data) < discord_chunk_size:
+    #     if self.stream.audio_out_queue.empty():
+    #         silence = AudioData.from_raw(data=b"\x00" * (
+    #             discord_chunk_size - len(self.audio_buffer.data.raw_data)
+    #         ), atype=AudioType.DISCORD)
+    #         self.audio_buffer.data.append(silence.data, crossfade=0)
+    #     else:
+    # nxt: AudioData = self.stream.audio_out_queue.get_nowait()
+    # self.audio_buffer.data.append(nxt.convert(AudioType.DISCORD).data, crossfade=0)
+    # chunk = self.audio_buffer[:discord_chunk_size]
+    # self.audio_buffer = self.audio_buffer[discord_chunk_size:]
+    # return chunk
+
     def read(self):
         if not self.stream.audio_out_queue.empty():
             chunk: AudioData = self.stream.audio_out_queue.get_nowait()
-            return chunk.data.raw_data
-
+            return chunk.convert(AudioType.DISCORD).data.raw_data
 
     def write(self, user: discord.Member, data: voice_recv.VoiceData):
         if user:
