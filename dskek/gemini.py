@@ -90,7 +90,7 @@ class AudioLoop:
 
     async def send_text(self, text: str):
         logging.info(f"Sending text: {text}")
-        await self.in_queue.put(text or ".")
+        self.in_queue.put(text or ".")
 
     async def send_image(self, img: Image):
         logging.info("Sending image")
@@ -103,11 +103,11 @@ class AudioLoop:
         mime_type = "image/jpeg"
         image_bytes = image_io.read()
         frame = {"mime_type": mime_type, "data": base64.b64encode(image_bytes).decode()}
-        await self.in_queue.put(frame)
+        self.in_queue.put(frame)
 
     async def send_realtime(self):
         while True:
-            msg: AudioData = await self.in_queue.get()
+            msg: AudioData = self.in_queue.get()
             logging.info(f"Received {len(msg.data.raw_data)} bytes of audio")
             msg_converted = msg.convert(AudioType.GEMINI_SEND).to_google_segment()
             logging.info(f"Converted to {len(msg.data.raw_data)} bytes of audio")

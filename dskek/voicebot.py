@@ -55,7 +55,7 @@ class VoiceBot(discord.AudioSource, voice_recv.AudioSink):
 
     def write(self, user: discord.Member, data: voice_recv.VoiceData):
         if user:
-            logger.info(f"Bot is writing {len(data.pcm)} bytes of audio")
+            # logger.debug(f"Bot is writing {len(data.pcm)} bytes of audio")
             self.stream.audio_in_queue.put_nowait(
                 AudioData.from_raw(data=data.pcm, atype=AudioType.DISCORD)
             )
