@@ -1,13 +1,13 @@
 import asyncio
 from collections import defaultdict
 import queue
-import janus
+import culsans
 
 
 class Stream:
     def __init__(self):
-        self.audio_in_queue = queue.Queue()
-        self.audio_out_queue = queue.Queue()
+        self.audio_in_queue = culsans.AsyncQueue()
+        self.audio_out_queue = culsans.AsyncQueue()
 
     def cleanup(self):
         # self.audio_in_queue.shutdown()

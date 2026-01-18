@@ -16,7 +16,6 @@ import asyncio
 import base64
 import io
 import traceback
-import janus
 
 from PIL import Image
 
@@ -91,7 +90,7 @@ class AudioLoop:
 
     async def send_text(self, text: str):
         logger.info(f"Sending text: {text}")
-        self.in_queue.put(text or ".")
+        await self.in_queue.put(text or ".")
 
     async def send_image(self, img: Image):
         logger.info("Sending image")
@@ -104,14 +103,14 @@ class AudioLoop:
         mime_type = "image/jpeg"
         image_bytes = image_io.read()
         frame = {"mime_type": mime_type, "data": base64.b64encode(image_bytes).decode()}
-        self.in_queue.put(frame)
+        await self.in_queue.put(frame)
 
     async def send_realtime(self):
         logger.info("Gemini starting send_realtime")
         millis = 0
         t = time.time()
         while True:
-            msg: AudioData = self.in_queue.get()
+            msg: AudioData = await self.in_queue.get()
             millis += len(msg.data)
             msg_converted = msg.convert(AudioType.GEMINI_SEND).to_google_segment()
             await self.session.send(input=msg_converted)
