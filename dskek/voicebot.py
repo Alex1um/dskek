@@ -8,7 +8,7 @@ import asyncio
 import logging
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("discord")
 
 
 class VoiceBot(discord.AudioSource, voice_recv.AudioSink):

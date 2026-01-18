@@ -35,7 +35,7 @@ import logging
 # CHUNK_SIZE = 1024
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("discord")
 
 
 MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
