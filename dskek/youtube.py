@@ -36,6 +36,7 @@ if YT_PROXY:
 if COOKIE_FILE:
     print(f"Using cookie file: {COOKIE_FILE}")
     ytdl_format_options["cookiefile"] = COOKIE_FILE
+    ytdl_format_options["cookiesfrombrowser"] = "firefox"
 
 ffmpeg_options = {
     "options": "-vn",
