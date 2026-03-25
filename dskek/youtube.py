@@ -1,5 +1,5 @@
 from dskek.discord_bot import bot
-from dskek.env import YT_PROXY, FFMPEG_PROXY
+from dskek.env import YT_PROXY, FFMPEG_PROXY, COOKIE_FILE
 import logging
 import yt_dlp
 import discord
@@ -31,6 +31,9 @@ ytdl_format_options = {
 
 if YT_PROXY:
     ytdl_format_options["proxy"] = YT_PROXY
+
+if COOKIE_FILE:
+    ytdl_format_options["cookiefile"] = COOKIE_FILE
 
 ffmpeg_options = {
     "options": "-vn",
