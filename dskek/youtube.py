@@ -27,6 +27,7 @@ ytdl_format_options = {
     "default_search": "auto",
     # bind to ipv4 since ipv6 addresses cause issues sometimes
     "source_address": "0.0.0.0",
+    "js_runtimes": {"node": {}},
 }
 
 if YT_PROXY:
@@ -48,6 +49,7 @@ if FFMPEG_PROXY:
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
 queues = {}
+
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
@@ -75,7 +77,9 @@ def play_next(ctx: Context):
         if not ctx.voice_client.is_playing():
             player = queue.pop(0)
             ctx.voice_client.play(player, after=lambda e: play_next(ctx))
-            asyncio.run_coroutine_threadsafe(ctx.send(f"**Now playing:** {player.title}"), bot.loop)
+            asyncio.run_coroutine_threadsafe(
+                ctx.send(f"**Now playing:** {player.title}"), bot.loop
+            )
 
 
 @bot.command(name="yt", help="Tells the bot to join the voice channel")
@@ -130,13 +134,20 @@ async def skip(ctx: Context):
     else:
         await ctx.send("Not playing anything to skip.")
 
+
 @bot.command(name="queue", help="To show the music queue")
 async def show_queue(ctx: Context):
     if ctx.guild.id in queues and queues[ctx.guild.id]:
-        queue_list = "\n".join([f"{i+1}. {player.title}" for i, player in enumerate(queues[ctx.guild.id])])
+        queue_list = "\n".join(
+            [
+                f"{i + 1}. {player.title}"
+                for i, player in enumerate(queues[ctx.guild.id])
+            ]
+        )
         await ctx.send(f"**Current Queue:**\n{queue_list}")
     else:
         await ctx.send("The queue is empty.")
+
 
 @bot.command(name="nowplaying", help="To show the currently playing song")
 async def now_playing(ctx: Context):
@@ -144,6 +155,7 @@ async def now_playing(ctx: Context):
         await ctx.send(f"**Now playing:** {ctx.voice_client.source.title}")
     else:
         await ctx.send("Not playing anything at the moment.")
+
 
 @bot.command(name="pause", help="To pause the current song")
 async def pause(ctx: Context):
@@ -153,6 +165,7 @@ async def pause(ctx: Context):
     else:
         await ctx.send("Not playing anything to pause.")
 
+
 @bot.command(name="resume", help="To resume the current song")
 async def resume(ctx: Context):
     if ctx.voice_client and ctx.voice_client.is_paused():
@@ -160,6 +173,7 @@ async def resume(ctx: Context):
         await ctx.send("Resumed the song.")
     else:
         await ctx.send("The song is not paused.")
+
 
 @bot.command(name="stop", help="To stop the music and clear the queue")
 async def stop(ctx: Context):
