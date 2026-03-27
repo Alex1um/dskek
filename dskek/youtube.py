@@ -1,11 +1,12 @@
 from dskek.discord_bot import bot
-from dskek.env import YT_PROXY, FFMPEG_PROXY, COOKIE_FILE
+from dskek.env import YT_PROXY, FFMPEG_PROXY, COOKIE_FILE, USER_AGENT
 import logging
 import yt_dlp
 import discord
 import asyncio
 from discord.ext.commands import Context
 import traceback
+from pathlib import Path
 
 
 logger = logging.getLogger("discord")
@@ -22,7 +23,7 @@ ytdl_format_options = {
     "nocheckcertificate": True,
     "ignoreerrors": False,
     "logtostderr": False,
-    "quiet": True,
+    "quiet": False,
     "no_warnings": True,
     "default_search": "auto",
     # bind to ipv4 since ipv6 addresses cause issues sometimes
@@ -33,10 +34,13 @@ ytdl_format_options = {
 if YT_PROXY:
     ytdl_format_options["proxy"] = YT_PROXY
 
-if COOKIE_FILE:
+if COOKIE_FILE and Path(COOKIE_FILE).exists():
     print(f"Using cookie file: {COOKIE_FILE}")
     ytdl_format_options["cookiefile"] = COOKIE_FILE
     ytdl_format_options["cookies"] = COOKIE_FILE
+
+if USER_AGENT:
+    ytdl_format_options["user_agent"] = USER_AGENT
 
 ffmpeg_options = {
     "options": "-vn",
@@ -65,6 +69,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await loop.run_in_executor(
             None, lambda: ytdl.extract_info(url, download=not stream)
         )
+        ytdl.list_formats(data)
         if "entries" in data:
             data = data["entries"][0]
         filename = data["url"] if stream else ytdl.prepare_filename(data)
