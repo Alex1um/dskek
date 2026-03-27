@@ -7,6 +7,7 @@ import asyncio
 from discord.ext.commands import Context
 import traceback
 from pathlib import Path
+import json
 
 
 logger = logging.getLogger("discord")
@@ -15,8 +16,29 @@ logger = logging.getLogger("discord")
 yt_dlp.utils.bug_reports_message = lambda before: logger.info(before)
 
 
+def format_selector(ctx):
+    """ Select the best audio.
+    NOTE: This is just an example and does not handle all cases """
+
+    # formats are already sorted worst to best
+    formats = ctx.get('formats')[::-1]
+
+    # vcodec='none' means there is no video
+    best_audio = next(f for f in formats if (
+        f['acodec'] != 'none' and f['vcodec'] == 'none'))
+
+    # These are the minimum required fields for a merged format
+    yield {
+        'format_id': f'{best_audio["format_id"]}',
+        'ext': best_audio['ext'],
+        'requested_formats': [best_audio],
+        # Must be + separated list of protocols
+        'protocol': f'{best_audio["protocol"]}'
+    }
+
+
 ytdl_format_options = {
-    "format": "bestaudio/best",
+    "format": format_selector,
     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
     "noplaylist": True,
@@ -69,7 +91,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await loop.run_in_executor(
             None, lambda: ytdl.extract_info(url, download=not stream)
         )
-        ytdl.list_formats(data)
+        print(json.dumps(ytdl.sanitize_info(data)))
         if "entries" in data:
             data = data["entries"][0]
         filename = data["url"] if stream else ytdl.prepare_filename(data)
