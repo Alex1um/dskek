@@ -38,7 +38,7 @@ def format_selector(ctx):
 
 
 ytdl_format_options = {
-    "format": format_selector,
+    "format": "ba",
     "outtmpl": "%(extractor)s-%(id)s-%(title)s.%(ext)s",
     "restrictfilenames": True,
     "noplaylist": True,
