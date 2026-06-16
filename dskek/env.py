@@ -10,6 +10,9 @@ YT_PROXY = os.environ.get("YT_PROXY")
 FFMPEG_PROXY = os.environ.get("FFMPEG_PROXY")
 COOKIE_FILE = os.environ.get("COOKIE_FILE")
 USER_AGENT = os.environ.get("USER_AGENT")
+SINK_NAME        = os.environ.get("SINK_NAME", "discord_sink")
+SINK_DESCRIPTION = os.environ.get("SINK_DESCRIPTION", "Discord Bot Audio")
+MONITOR_SOURCE   = f"{SINK_NAME}.monitor"
 
 if PROXY:
     os.environ["wss_proxy"] = PROXY

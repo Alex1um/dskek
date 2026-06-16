@@ -30,4 +30,4 @@ def main():
     if not DISCORD_BOT_TOKEN:
         print("ERROR: Please set the DISCORD_BOT_TOKEN environment variable.")
     else:
-        bot.run(DISCORD_BOT_TOKEN)
+        bot.run(DISCORD_BOT_TOKEN, root_logger=True)
