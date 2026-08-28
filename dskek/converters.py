@@ -35,8 +35,11 @@ class AudioData:
     data: AudioSegment
     atype: AudioType
 
-    def convert(self, to_type: AudioType):
-        to_type_info = to_type.value
+    def convert(self, to_type: AudioType | AudioInfo):
+        if isinstance(to_type, AudioType):
+            to_type_info = to_type.value
+        else:
+            to_type_info = to_type
         return AudioData(
             data=self.data.set_frame_rate(to_type_info.sample_rate)
             .set_sample_width(to_type_info.sample_width)
@@ -45,13 +48,15 @@ class AudioData:
         )
 
     @classmethod
-    def from_raw(cls, data: bytes, atype: AudioType):
+    def from_raw(cls, data: bytes, atype: AudioType | AudioInfo):
+        if isinstance(atype, AudioType):
+            atype = atype.value
         return cls(
             data=AudioSegment.from_raw(
                 BytesIO(data),
-                sample_width=atype.value.sample_width,
-                frame_rate=atype.value.sample_rate,
-                channels=atype.value.channels,
+                sample_width=atype.sample_width,
+                frame_rate=atype.sample_rate,
+                channels=atype.channels,
             ),
             atype=atype,
         )

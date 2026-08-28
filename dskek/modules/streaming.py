@@ -14,8 +14,6 @@ from dskek.env import MONITOR_SOURCE, SINK_DESCRIPTION, SINK_NAME
 
 log = logging.getLogger("discord-audio-bot")
 
-ffmpeg_log_file = open("ffmpeg.log", "w")
-
 _pulse_module_id: str | None = None
 
 
@@ -113,8 +111,8 @@ def make_audio_source() -> discord.FFmpegPCMAudio:
         source=MONITOR_SOURCE,
         # -f pulse tells ffmpeg to treat the source as a PulseAudio device
         # (PipeWire exposes a Pulse-compatible server via pipewire-pulse).
-        before_options="-report -loglevel level+trace -f pulse",
-        stderr=ffmpeg_log_file,
+        before_options="-f pulse",
+        options="-vn"
     )
 
 
@@ -171,6 +169,9 @@ async def stream(ctx: commands.Context) -> None:
         vc.stop()
 
     vc.play(make_audio_source(), after=lambda e: _auto_restart(vc, e))
+    vc.source = discord.PCMVolumeTransformer(vc.source, volume=1.0)
+    while vc.is_playing():
+        await asyncio.sleep(.1)
     await ctx.send(
         f"🎵 Joined **{channel.name}** and streaming `{MONITOR_SOURCE}`.\n"
         f"Route any app's audio output to **{SINK_DESCRIPTION}** to hear it here.\n"

@@ -26,6 +26,9 @@ from google.genai import types
 from dskek.models import QueueData, AudioData, AudioType
 from dskek.converters import AudioData, AudioType
 from dskek.channels import Stream
+from dskek.proxy_clients import get_http_client, get_async_http_client
+from dskek.env import GEMINI_PROXY
+from google.genai.types import HttpOptions
 from pydub import AudioSegment
 import time
 import logging
@@ -38,12 +41,14 @@ import logging
 
 logger = logging.getLogger("discord")
 
-
-MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
+MODEL = "gemini-3.1-flash-live-preview"
 
 client = genai.Client(
-    http_options={"api_version": "v1beta"},
     api_key=os.environ.get("GEMINI_API_KEY"),
+    http_options=HttpOptions(
+        httpx_async_client=get_async_http_client(GEMINI_PROXY),
+        httpx_client=get_http_client(GEMINI_PROXY),
+    )
 )
 
 tools = [

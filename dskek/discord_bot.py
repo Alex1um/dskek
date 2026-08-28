@@ -23,7 +23,8 @@ class ProxiedBot(commands.Bot):
         await super().start(*args, **kwargs)
 
 
-bot = ProxiedBot(command_prefix='!', intents=intents)
+# bot = ProxiedBot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents, proxy=PROXY)
 
 
 def main():

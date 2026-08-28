@@ -1,7 +1,7 @@
 from dskek.discord_bot import bot
 from dskek.channels import Stream
 from dskek.converters import AudioType, AudioData
-from dskek.gemini import AudioLoop
+from dskek.gemini import AudioLoop, client
 from discord.ext import voice_recv, commands
 import discord
 import asyncio
@@ -106,3 +106,12 @@ async def on_join(ctx: commands.Context):
     except Exception as e:
         logger.exception(f"Bot error: {e}\n{traceback.format_exc()}")
         await ctx.reply(f"Exception: {e}")
+
+
+@bot.command()
+async def models(ctx: commands.Context):
+    pager = await client.aio.models.list()
+    s = []
+    for page in pager:
+        s.append(page.name)
+    await ctx.reply(f"```{'\n'.join(s)}```")
