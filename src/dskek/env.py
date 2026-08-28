@@ -1,5 +1,6 @@
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -14,6 +15,9 @@ USER_AGENT = os.environ.get("USER_AGENT")
 SINK_NAME        = os.environ.get("SINK_NAME", "discord_sink")
 SINK_DESCRIPTION = os.environ.get("SINK_DESCRIPTION", "Discord Bot Audio")
 MONITOR_SOURCE   = f"{SINK_NAME}.monitor"
+OPENAI_ADDRESS = os.environ.get("OPENAI_ADDRESS")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL")
+OPENAI_KEY = os.environ.get("OPENAI_KEY", "None")
 
 if PROXY:
     os.environ["wss_proxy"] = PROXY

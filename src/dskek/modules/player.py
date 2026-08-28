@@ -1,15 +1,16 @@
-from dskek.discord_bot import bot
-from dskek.channels import Stream
-from dskek.converters import AudioType, AudioData, AudioInfo
-from discord.ext import commands
-from pathlib import Path
-from pydub import AudioSegment
-import discord
 import asyncio
 import logging
-import traceback
 import time
+import traceback
+from pathlib import Path
 
+import discord
+from discord.ext import commands
+from pydub import AudioSegment
+
+from dskek.channels import Stream
+from dskek.converters import AudioData, AudioInfo, AudioType
+from dskek.discord_bot import bot
 
 logger = logging.getLogger("discord")
 

@@ -3,7 +3,7 @@ name = "dskek"
 version = "0.2.11"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "aiohttp-socks>=0.11.0",
     "culsans>=0.11.0",
@@ -12,10 +12,18 @@ dependencies = [
     "dotenv>=0.9.9",
     "google-genai>=2.8.0",
     "httpx[socks]>=0.28.1",
+    "openai>=3.5.0",
     "pillow>=12.1.0",
     "pydub>=0.25.1",
     "pynacl>=1.5.0",
     "python-socks>=2.8.1",
     "types-pillow>=10.2.0.20240822",
-    "yt-dlp>=2026.6.9   ",
+    "yt-dlp>=2026.8.19",
 ]
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13"]
+build-backend = "uv_build"
+
+[project.scripts]
+dskek = "dskek.__main__:main"
