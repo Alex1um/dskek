@@ -1,11 +1,12 @@
-import discord
-from discord.ext import commands
+import logging
 import os
+
+import discord
 from aiohttp_socks import ProxyConnector
+from discord.ext import commands
+
 from dskek.env import DISCORD_BOT_TOKEN, PROXY
 from dskek.proxy_clients import get_aio_proxy_connector_checked
-import logging
-
 
 intents = discord.Intents.default()
 intents.message_content = True

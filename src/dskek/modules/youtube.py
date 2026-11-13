@@ -1,14 +1,15 @@
-from dskek.discord_bot import bot
-from dskek.env import YT_PROXY, FFMPEG_PROXY, COOKIE_FILE, USER_AGENT
-import logging
-import yt_dlp
-import discord
 import asyncio
-from discord.ext.commands import Context
+import json
+import logging
 import traceback
 from pathlib import Path
-import json
 
+import discord
+import yt_dlp
+from discord.ext.commands import Context
+
+from dskek.discord_bot import bot
+from dskek.env import COOKIE_FILE, FFMPEG_PROXY, USER_AGENT, YT_PROXY
 
 logger = logging.getLogger("discord")
 
@@ -17,23 +18,22 @@ yt_dlp.utils.bug_reports_message = lambda before: logger.info(before)
 
 
 def format_selector(ctx):
-    """ Select the best audio.
-    NOTE: This is just an example and does not handle all cases """
+    """Select the best audio.
+    NOTE: This is just an example and does not handle all cases"""
 
     # formats are already sorted worst to best
-    formats = ctx.get('formats')[::-1]
+    formats = ctx.get("formats")[::-1]
 
     # vcodec='none' means there is no video
-    best_audio = next(f for f in formats if (
-        f['acodec'] != 'none' and f['vcodec'] == 'none'))
+    best_audio = next(f for f in formats if (f["acodec"] != "none" and f["vcodec"] == "none"))
 
     # These are the minimum required fields for a merged format
     yield {
-        'format_id': f'{best_audio["format_id"]}',
-        'ext': best_audio['ext'],
-        'requested_formats': [best_audio],
+        "format_id": f"{best_audio['format_id']}",
+        "ext": best_audio["ext"],
+        "requested_formats": [best_audio],
         # Must be + separated list of protocols
-        'protocol': f'{best_audio["protocol"]}'
+        "protocol": f"{best_audio['protocol']}",
     }
 
 
@@ -88,9 +88,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(cls, url: str, *, loop=None, stream=True):
         loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(
-            None, lambda: ytdl.extract_info(url, download=not stream)
-        )
+        data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
         print(json.dumps(ytdl.sanitize_info(data)))
         if "entries" in data:
             data = data["entries"][0]
@@ -105,17 +103,13 @@ def play_next(ctx: Context):
         if not ctx.voice_client.is_playing():
             player = queue.pop(0)
             ctx.voice_client.play(player, after=lambda e: play_next(ctx))
-            asyncio.run_coroutine_threadsafe(
-                ctx.send(f"**Now playing:** {player.title}"), bot.loop
-            )
+            asyncio.run_coroutine_threadsafe(ctx.send(f"**Now playing:** {player.title}"), bot.loop)
 
 
 @bot.command(name="yt", help="Tells the bot to join the voice channel")
 async def join(ctx: Context):
     if not ctx.message.author.voice:
-        await ctx.send(
-            "{} is not connected to a voice channel".format(ctx.message.author.name)
-        )
+        await ctx.send("{} is not connected to a voice channel".format(ctx.message.author.name))
         return
     else:
         channel = ctx.message.author.voice.channel
@@ -166,12 +160,7 @@ async def skip(ctx: Context):
 @bot.command(name="queue", help="To show the music queue")
 async def show_queue(ctx: Context):
     if ctx.guild.id in queues and queues[ctx.guild.id]:
-        queue_list = "\n".join(
-            [
-                f"{i + 1}. {player.title}"
-                for i, player in enumerate(queues[ctx.guild.id])
-            ]
-        )
+        queue_list = "\n".join([f"{i + 1}. {player.title}" for i, player in enumerate(queues[ctx.guild.id])])
         await ctx.send(f"**Current Queue:**\n{queue_list}")
     else:
         await ctx.send("The queue is empty.")
@@ -205,7 +194,7 @@ async def resume(ctx: Context):
 
 @bot.command(name="stop", help="To stop the music and clear the queue")
 async def stop(ctx: Context):
-    if ctx.guild.id in queues:
+    if ctx.guild is not None and ctx.guild.id in queues:
         queues[ctx.guild.id] = []
     if ctx.voice_client and ctx.voice_client.is_playing():
         ctx.voice_client.stop()

@@ -1,0 +1,6 @@
+# Python 3.14. NOTE: this replaces upstream discord.py with the DAVE-capable fork (see README).
+numpy
+openai
+# sherpa-onnx 2.x removed espeak-ng: Piper voices go silent and Kokoro drops unknown words.
+sherpa-onnx>=1.13,<2
+discord-ext-voice-recv @ git+https://github.com/zacker150/discord-ext-voice-recv@dcf543a1618d6212f10db5d5dbb7a45f76a955e9

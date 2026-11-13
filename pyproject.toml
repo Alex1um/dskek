@@ -7,8 +7,9 @@ requires-python = ">=3.14"
 dependencies = [
     "aiohttp-socks>=0.12.0",
     "culsans>=0.11.0",
+    "davey>=0.1.7",
     "discord-ext-voice-recv>=0.5.2a179",
-    "discord-py>=2.7.1",
+    "discord-py[voice]>=2.7.1",
     "dotenv>=0.9.9",
     "google-genai>=3.3.0",
     "httpx[socks]>=0.28.1",
@@ -17,6 +18,7 @@ dependencies = [
     "pydub>=0.25.1",
     "pynacl>=1.5.0",
     "python-socks>=2.8.1",
+    "sherpa-onnx<2",
     "types-pillow>=10.2.0.20240822",
     "yt-dlp>=2026.10.26",
 ]
@@ -24,6 +26,14 @@ dependencies = [
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13"]
 build-backend = "uv_build"
+
+[tool.uv.workspace]
+members = [
+    "src/dskek/modules/talker",
+]
+
+[tool.uv.sources]
+discord-ext-voice-recv = { git = "https://github.com/zacker150/discord-ext-voice-recv", rev = "dcf543a1618d6212f10db5d5dbb7a45f76a955e9" }
 
 [project.scripts]
 dskek = "dskek.__main__:main"
