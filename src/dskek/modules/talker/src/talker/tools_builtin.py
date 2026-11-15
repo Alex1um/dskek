@@ -23,13 +23,22 @@ class SayArgs:
 
 @dataclass(frozen=True, slots=True)
 class TimeArgs:
-    timezone: str | None = described("IANA timezone such as 'Europe/Paris'. Omit for the bot's local time.", default=None)
+    timezone: str | None = described(
+        "IANA timezone such as 'Europe/Paris'. Omit for the bot's local time.", default=None
+    )
 
 
 @dataclass(frozen=True, slots=True)
 class SendMessageArgs:
     text: str = described("The message text to post.")
-    channel: str | None = described("Text channel name. Omit to use the channel where the voice chat was started.", default=None)
+    channel: str | None = described(
+        "Text channel name. Omit to use the channel where the voice chat was started.", default=None
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class GetUserInfoArgs:
+    user_id: str = described("User name or id in discord channel.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,7 +132,9 @@ class RunBotCommandTool(TypedTool[RunCommandArgs]):
 
     @override
     async def run(self, ctx: ToolContext, args: RunCommandArgs) -> str:
-        return await _gateway(ctx).run_command(ctx.speaker_id, args.command.strip().lstrip("!/"), args.arguments.strip())
+        return await _gateway(ctx).run_command(
+            ctx.speaker_id, args.command.strip().lstrip("!/"), args.arguments.strip()
+        )
 
 
 class SendMessageTool(TypedTool[SendMessageArgs]):
@@ -140,6 +151,34 @@ class SendMessageTool(TypedTool[SendMessageArgs]):
         if not args.text.strip():
             raise ToolError("the message is empty")
         return await _gateway(ctx).send_message(args.text.strip(), args.channel)
+
+
+class GetChannelListTool(TypedTool[NoArgs]):
+    def __init__(self) -> None:
+        super().__init__(
+            name="list_channels",
+            description="Get a list of all the text channels on the server to send text to.",
+            params=NoArgs,
+            risk=ToolRisk.SAFE,
+        )
+
+    @override
+    async def run(self, ctx: ToolContext, args: NoArgs) -> str:
+        return "\n".join(_gateway(ctx).list_channels())
+
+
+class GetUserInfoTool(TypedTool[GetUserInfoArgs]):
+    def __init__(self) -> None:
+        super().__init__(
+            name="user_info",
+            description="Get an info of the user. Info contains user's id, name",
+            params=GetUserInfoArgs,
+            risk=ToolRisk.SAFE,
+        )
+
+    @override
+    async def run(self, ctx: ToolContext, args: GetUserInfoArgs) -> str:
+        return _gateway(ctx).get_user_info(args.user_id)
 
 
 class LeaveVoiceTool(TypedTool[NoArgs]):
@@ -167,5 +206,7 @@ def register_builtin_tools(registry: ToolRegistry) -> None:
         RunBotCommandTool(),
         SendMessageTool(),
         LeaveVoiceTool(),
+        GetChannelListTool(),
+        GetUserInfoTool(),
     ):
         registry.register(tool)

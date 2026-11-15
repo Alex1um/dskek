@@ -94,3 +94,23 @@ class BotGateway(DiscordGateway):
         channel = self._voice_channel
         members = getattr(channel, "members", [])
         return [m.display_name for m in members if not m.bot]
+
+    @override
+    def list_channels(self) -> list[str]:
+        return [channel.name for channel in self._guild.channels]
+
+    @override
+    def get_user_info(self, user_id: str) -> str:
+        user = self._guild.get_member_named(user_id)
+        if user is None:
+            raise ToolError(f"User {user} is not found on server")
+        info = (
+            f"{user.id=}",
+            f"{user.name=}",
+            f"{user.discriminator=}",
+            f"{user.global_name=}",
+            f"{user.nick=}",
+            f"{user.created_at=:%b %d, %Y - %H:%M}",
+            f"{user.joined_at=:%b %d, %Y - %H:%M}" if user.joined_at is not None else None
+        )
+        return "\n".join(inf for inf in info if inf)

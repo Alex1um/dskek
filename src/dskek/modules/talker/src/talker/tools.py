@@ -57,6 +57,10 @@ class DiscordGateway(Protocol):
 
     def voice_members(self) -> list[str]: ...
 
+    def list_channels(self) -> list[str]: ...
+
+    def get_user_info(self, user_id: str) -> str: ...
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ToolContext:

@@ -74,7 +74,14 @@ class OpenAiCompatChat(ChatModel):
         self, messages: Sequence[ChatMessage], tools: Sequence[ToolSpec] = ()
     ) -> AsyncIterator[LlmEvent]:
         cfg = self._config
+        full_body = {
+            "enable_tools": True,
+            "enabled_tools": ["web_search", "python", "terminal"],
+            "permission_mode": "off",
+        }
         extra_body = {"chat_template_kwargs": {"enable_thinking": False}} if cfg.disable_thinking else None
+        if extra_body is not None:
+            full_body |= extra_body
         stream = await self._client.chat.completions.create(
             model=cfg.model,
             messages=[_to_param(m) for m in messages],
@@ -82,7 +89,7 @@ class OpenAiCompatChat(ChatModel):
             stream=True,
             max_tokens=cfg.max_tokens,
             temperature=cfg.temperature,
-            extra_body=extra_body,
+            extra_body=full_body,
         )
         partial: dict[int, _PartialCall] = {}
         try:

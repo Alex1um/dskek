@@ -107,9 +107,11 @@ async def ai_join(ctx: Context[Bot]) -> None:
     session.open_conversation()
     wake = engine.settings.wake
     if wake.enabled:
-        await session.say(f"Hi! I'm {wake.names[0].title()}. Say my name when you need me.")
+        # await session.say(f"Hi! I'm {wake.names[0].title()}. Say my name when you need me.")
+        await session.say(f"Привет! Я {wake.names[0].title()}. Скажи мое имя, чтобы вызвать меня.")
     else:
-        await session.say("Hi! I'm listening. Just start talking.")
+        # await session.say("Hi! I'm listening. Just start talking.")
+        await session.say("Слушаю.")
 
 
 async def _stop_chat(guild_id: int) -> bool:
