@@ -1,6 +1,7 @@
 """Audio conversion and the streaming playback source for Discord (48 kHz, 16-bit, stereo)."""
 
 import threading
+import time
 from typing import override
 
 import discord
@@ -59,6 +60,7 @@ class StreamingPcmSource(discord.AudioSource):
         self._generation = 0
         self._fed = 0
         self._played = 0
+        self._last_audio_at = 0.0
 
     # ---- producer side (any thread) ---------------------------------------------------
     @property
@@ -75,6 +77,12 @@ class StreamingPcmSource(discord.AudioSource):
     def played_bytes(self) -> int:
         with self._lock:
             return self._played
+
+    @property
+    def last_audio_at(self) -> float:
+        """``time.monotonic()`` of the last real (non-silence) frame handed to Discord."""
+        with self._lock:
+            return self._last_audio_at
 
     @property
     def is_active(self) -> bool:
@@ -119,12 +127,14 @@ class StreamingPcmSource(discord.AudioSource):
                 frame = bytes(self._buffer[:FRAME_BYTES])
                 del self._buffer[:FRAME_BYTES]
                 self._played += FRAME_BYTES
+                self._last_audio_at = time.monotonic()
                 return frame
 
             if self._finishing:  # last partial frame of the reply
                 tail = bytes(self._buffer)
                 self._buffer.clear()
                 self._played += len(tail)
+                self._last_audio_at = time.monotonic()
                 self._started = False
                 self._finishing = False
                 return tail.ljust(FRAME_BYTES, b"\x00")
@@ -139,3 +149,30 @@ class StreamingPcmSource(discord.AudioSource):
     @override
     def cleanup(self) -> None:
         self.clear()
+
+
+class GapFiller:
+    """Re-creates the pauses Discord does not transmit.
+
+    While a user is silent Discord sends no packets, so the received audio has the pauses cut
+    out and words run together. RTP timestamps (48 kHz clock) reveal how long each pause was.
+    Not thread-safe: use from the receive thread only.
+    """
+
+    def __init__(self, *, max_fill_s: float) -> None:
+        self._max_fill = int(max_fill_s * DISCORD_SAMPLE_RATE)
+        self._last: dict[int, tuple[int, int]] = {}
+
+    def missing_samples(self, user_id: int, rtp_timestamp: int, frame_samples: int) -> int:
+        """Samples of silence to insert *before* this frame (0 if none or if the pause is long)."""
+        previous = self._last.get(user_id)
+        self._last[user_id] = (rtp_timestamp, frame_samples)
+        if previous is None:
+            return 0
+        last_ts, last_len = previous
+        gap = ((rtp_timestamp - last_ts) & 0xFFFFFFFF) - last_len  # 32-bit RTP wrap-around
+        # Out-of-order packets wrap to huge values and long pauses are utterance boundaries: both ignored.
+        return gap if 0 < gap <= self._max_fill else 0
+
+    def forget(self, user_id: int) -> None:
+        self._last.pop(user_id, None)

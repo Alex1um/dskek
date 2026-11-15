@@ -2,19 +2,25 @@
 
 import re
 from collections.abc import AsyncIterator, Sequence
+from dataclasses import dataclass
 from typing import override
 
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, omit
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam,
+    ChatCompletionMessageToolCallParam,
     ChatCompletionSystemMessageParam,
+    ChatCompletionToolMessageParam,
+    ChatCompletionToolParam,
     ChatCompletionUserMessageParam,
 )
+from openai.types.shared_params import FunctionDefinition
 
 from .config import LlmConfig
-from .models import ChatMessage, Role
+from .models import ChatMessage, LlmEvent, ReplyComplete, Role, TextDelta, ToolArgsDelta, ToolCall
 from .protocols import ChatModel
+from .tools import ToolSpec
 
 
 def _to_param(message: ChatMessage) -> ChatCompletionMessageParam:
@@ -23,8 +29,37 @@ def _to_param(message: ChatMessage) -> ChatCompletionMessageParam:
             return ChatCompletionSystemMessageParam(role="system", content=message.content)
         case Role.USER:
             return ChatCompletionUserMessageParam(role="user", content=message.content)
+        case Role.TOOL:
+            return ChatCompletionToolMessageParam(
+                role="tool", content=message.content, tool_call_id=message.tool_call_id or ""
+            )
         case Role.ASSISTANT:
-            return ChatCompletionAssistantMessageParam(role="assistant", content=message.content)
+            if not message.tool_calls:
+                return ChatCompletionAssistantMessageParam(role="assistant", content=message.content)
+            return ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content=message.content or None,
+                tool_calls=[
+                    ChatCompletionMessageToolCallParam(
+                        id=call.id, type="function", function={"name": call.name, "arguments": call.arguments}
+                    )
+                    for call in message.tool_calls
+                ],
+            )
+
+
+def _tool_param(spec: ToolSpec) -> ChatCompletionToolParam:
+    return ChatCompletionToolParam(
+        type="function",
+        function=FunctionDefinition(name=spec.name, description=spec.description, parameters=spec.parameters),
+    )
+
+
+@dataclass(slots=True)
+class _PartialCall:
+    id: str = ""
+    name: str = ""
+    arguments: str = ""
 
 
 class OpenAiCompatChat(ChatModel):
@@ -35,33 +70,48 @@ class OpenAiCompatChat(ChatModel):
         self._client = AsyncOpenAI(base_url=config.base_url, api_key=config.api_key, timeout=config.timeout_s)
 
     @override
-    async def stream_reply(self, messages: Sequence[ChatMessage]) -> AsyncIterator[str]:
+    async def stream_reply(
+        self, messages: Sequence[ChatMessage], tools: Sequence[ToolSpec] = ()
+    ) -> AsyncIterator[LlmEvent]:
         cfg = self._config
-        extra_body_tools = {
-            "enable_tools": True,
-            "enabled_tools": ["web_search", "python", "terminal"],
-            "permission_mode": "off",
-        }
         extra_body = {"chat_template_kwargs": {"enable_thinking": False}} if cfg.disable_thinking else None
-        if extra_body:
-            extra_body_tools |= extra_body
         stream = await self._client.chat.completions.create(
             model=cfg.model,
             messages=[_to_param(m) for m in messages],
+            tools=[_tool_param(t) for t in tools] if tools else omit,
             stream=True,
             max_tokens=cfg.max_tokens,
             temperature=cfg.temperature,
-            extra_body=extra_body_tools,
+            extra_body=extra_body,
         )
+        partial: dict[int, _PartialCall] = {}
         try:
             async for chunk in stream:
                 if not chunk.choices:
                     continue
-                delta = chunk.choices[0].delta.content
-                if delta:
-                    yield delta
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield TextDelta(delta.content)
+                for tc in delta.tool_calls or ():
+                    call = partial.setdefault(tc.index, _PartialCall())
+                    if tc.id:
+                        call.id = tc.id
+                    function = tc.function
+                    if function is None:
+                        continue
+                    if function.name:
+                        call.name += function.name
+                    if function.arguments:
+                        call.arguments += function.arguments
+                        yield ToolArgsDelta(index=tc.index, name=call.name, fragment=function.arguments)
         finally:
             await stream.close()  # stops generation server-side when we get cancelled
+        calls = tuple(
+            ToolCall(id=c.id or f"call_{index}", name=c.name, arguments=c.arguments or "{}", index=index)
+            for index, c in sorted(partial.items())
+            if c.name
+        )
+        yield ReplyComplete(tool_calls=calls)
 
     async def aclose(self) -> None:
         await self._client.close()

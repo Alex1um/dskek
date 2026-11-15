@@ -1,9 +1,12 @@
 """Swappable backends. Implement these to plug in a different ASR/TTS/LLM."""
 
 from collections.abc import AsyncIterator, Callable, Sequence
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from .models import ChatMessage, FloatAudio, RecognitionUpdate
+from .models import ChatMessage, FloatAudio, LlmEvent, RecognitionUpdate
+
+if TYPE_CHECKING:
+    from .tools import ToolSpec
 
 
 class RecognitionStream(Protocol):
@@ -17,7 +20,17 @@ class RecognitionStream(Protocol):
 
 
 class SpeechRecognizer(Protocol):
+    """Streaming recognizer: cheap partial results while the user speaks (used for barge-in)."""
+
     def open_stream(self) -> RecognitionStream: ...
+
+
+class FinalRecognizer(Protocol):
+    """Accurate offline recognizer run once per finished utterance (second pass)."""
+
+    def transcribe(self, samples: FloatAudio, sample_rate: int) -> str:
+        """Blocking."""
+        ...
 
 
 class SpeechSynthesizer(Protocol):
@@ -30,6 +43,8 @@ class SpeechSynthesizer(Protocol):
 
 
 class ChatModel(Protocol):
-    def stream_reply(self, messages: Sequence[ChatMessage]) -> AsyncIterator[str]:
-        """Yield the assistant reply as text deltas."""
+    def stream_reply(
+        self, messages: Sequence[ChatMessage], tools: Sequence["ToolSpec"] = ()
+    ) -> AsyncIterator[LlmEvent]:
+        """Yield text deltas, tool-argument fragments, and finally a ``ReplyComplete``."""
         ...

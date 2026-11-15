@@ -1,15 +1,22 @@
 """Streaming speech recognition on CPU via sherpa-onnx (online transducer)."""
 
+import re
 from typing import override
 
 import numpy as np
 import sherpa_onnx  # type: ignore[import-untyped]  # no stubs published
 
-from .config import AsrConfig
+from .config import AsrConfig, ConfigError, FinalAsrConfig, FinalAsrKind
 from .models import FloatAudio, RecognitionUpdate
-from .protocols import RecognitionStream, SpeechRecognizer
+from .protocols import FinalRecognizer, RecognitionStream, SpeechRecognizer
 
 _MODEL_RATE = 16_000
+_ANNOTATION = re.compile(r"[\[(][^\])]*[\])]")
+
+
+def strip_annotations(text: str) -> str:
+    """Remove non-speech markers some models emit ("(silence)", "[BLANK_AUDIO]", "(music)")."""
+    return " ".join(_ANNOTATION.sub(" ", text).split())
 
 
 class SherpaStreamingRecognizer(SpeechRecognizer):
@@ -24,7 +31,7 @@ class SherpaStreamingRecognizer(SpeechRecognizer):
         if config.model_type == "t-one-ctc":
             self._recognizer = sherpa_onnx.OnlineRecognizer.from_t_one_ctc(
                 tokens=str(config.tokens),
-                model=str(config.encoder) or str(config.decoder) or str(config.joiner),
+                model=str(config.encoder),
                 num_threads=config.num_threads,
                 sample_rate=_MODEL_RATE,
                 feature_dim=80,
@@ -32,7 +39,7 @@ class SherpaStreamingRecognizer(SpeechRecognizer):
                 rule1_min_trailing_silence=2.4,
                 rule2_min_trailing_silence=config.trailing_silence_s,
                 rule3_min_utterance_length=20.0,
-                decoding_method="greedy_search",
+                decoding_method=config.decoding_method,
                 provider="cpu",
             )
         else:
@@ -48,7 +55,7 @@ class SherpaStreamingRecognizer(SpeechRecognizer):
                 rule1_min_trailing_silence=2.4,
                 rule2_min_trailing_silence=config.trailing_silence_s,
                 rule3_min_utterance_length=20.0,
-                decoding_method="greedy_search",
+                decoding_method=config.decoding_method,
                 provider="cpu",
             )
 
@@ -90,3 +97,60 @@ class _SherpaStream(RecognitionStream):
     def _decode_ready(self) -> None:
         while self._recognizer.is_ready(self._stream):
             self._recognizer.decode_stream(self._stream)
+
+
+class SherpaFinalRecognizer(FinalRecognizer):
+    """Accurate offline model for the second pass (Parakeet / Whisper / SenseVoice)."""
+
+    def __init__(self, config: FinalAsrConfig) -> None:
+        self._max_s = config.max_utterance_s
+        self._recognizer = self._build(config)
+
+    @staticmethod
+    def _build(config: FinalAsrConfig) -> sherpa_onnx.OfflineRecognizer:
+        match config.kind:
+            case FinalAsrKind.NEMO_TRANSDUCER:
+                if not (config.encoder and config.decoder and config.joiner):
+                    raise ConfigError("nemo_transducer needs VOICE_FINAL_ASR_ENCODER/DECODER/JOINER")
+                return sherpa_onnx.OfflineRecognizer.from_transducer(
+                    encoder=str(config.encoder),
+                    decoder=str(config.decoder),
+                    joiner=str(config.joiner),
+                    tokens=str(config.tokens),
+                    num_threads=config.num_threads,
+                    sample_rate=_MODEL_RATE,
+                    feature_dim=80,
+                    decoding_method="greedy_search",
+                    model_type="nemo_transducer",
+                )
+            case FinalAsrKind.WHISPER:
+                if not (config.encoder and config.decoder):
+                    raise ConfigError("whisper needs VOICE_FINAL_ASR_ENCODER and VOICE_FINAL_ASR_DECODER")
+                return sherpa_onnx.OfflineRecognizer.from_whisper(
+                    encoder=str(config.encoder),
+                    decoder=str(config.decoder),
+                    tokens=str(config.tokens),
+                    language=config.language,
+                    task="transcribe",
+                    num_threads=config.num_threads,
+                )
+            case FinalAsrKind.SENSE_VOICE:
+                if not config.model:
+                    raise ConfigError("sense_voice needs VOICE_FINAL_ASR_MODEL")
+                return sherpa_onnx.OfflineRecognizer.from_sense_voice(
+                    model=str(config.model),
+                    tokens=str(config.tokens),
+                    num_threads=config.num_threads,
+                    language=config.language,
+                    use_itn=True,
+                )
+
+    @override
+    def transcribe(self, samples: FloatAudio, sample_rate: int) -> str:
+        limit = int(self._max_s * sample_rate)
+        if len(samples) > limit:
+            samples = samples[-limit:]
+        stream = self._recognizer.create_stream()
+        stream.accept_waveform(sample_rate, samples)
+        self._recognizer.decode_stream(stream)
+        return strip_annotations(str(stream.result.text))

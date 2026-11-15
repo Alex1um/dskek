@@ -1,4 +1,4 @@
-"""Discord commands: ``!ai_join``, ``!ai_leave``, ``!ai_reset``.
+"""Discord commands: ``!ai_join``, ``!ai_leave``, ``!ai_reset``, ``!ai_wake``.
 
 Import this module once from your bot's startup code so the commands register::
 
@@ -17,6 +17,7 @@ from dskek.discord_bot import bot
 from .audio import StreamingPcmSource
 from .config import ConfigError, VoiceChatSettings
 from .engine import VoiceEngine
+from .gateway import BotGateway
 from .session import VoiceChatSession
 from .sink import VoiceChatSink
 
@@ -85,23 +86,67 @@ async def ai_join(ctx: Context[Bot]) -> None:
     async def notify(message: str) -> None:
         await ctx.send(message)
 
-    session = VoiceChatSession(engine=engine, source=source, loop=asyncio.get_running_loop(), notify=notify)
+    async def on_leave() -> None:
+        await _stop_chat(guild.id)
+
+    gateway = BotGateway(
+        bot=bot,
+        guild=guild,
+        text_channel=ctx.channel,
+        base_message=ctx.message,
+        voice_channel=voice.channel,
+        config=engine.settings.tools,
+    )
+    session = VoiceChatSession(
+        engine=engine, source=source, loop=asyncio.get_running_loop(), gateway=gateway, notify=notify, on_leave=on_leave
+    )
     client.listen(VoiceChatSink(session))
     client.play(source)
     _active[guild.id] = _ActiveChat(session=session, client=client, source=source)
 
-    await session.say("Здарова, я готов слушать.")
+    session.open_conversation()
+    wake = engine.settings.wake
+    if wake.enabled:
+        await session.say(f"Hi! I'm {wake.names[0].title()}. Say my name when you need me.")
+    else:
+        await session.say("Hi! I'm listening. Just start talking.")
+
+
+async def _stop_chat(guild_id: int) -> bool:
+    chat = _active.pop(guild_id, None)
+    if chat is None:
+        return False
+    await chat.session.close()
+    chat.client.stop()
+    await chat.client.disconnect()
+    return True
+
+
+async def shutdown_voice_chat() -> None:
+    """Call from your bot's shutdown hook: closes sessions, MCP connections and worker threads."""
+    for guild_id in list(_active):
+        await _stop_chat(guild_id)
+    if _engine is not None:
+        await _engine.aclose()
 
 
 @bot.command(name="ai_leave", help="Stop the AI voice chat and leave the channel")
 async def ai_leave(ctx: Context[Bot]) -> None:
-    if ctx.guild is None or (chat := _active.pop(ctx.guild.id, None)) is None:
+    if ctx.guild is None or not await _stop_chat(ctx.guild.id):
         await ctx.send("No AI voice chat is running here.")
         return
-    await chat.session.close()
-    chat.client.stop()
-    await chat.client.disconnect()
     await ctx.send("Bye!")
+
+
+@bot.command(name="ai_wake", help="Require the bot's name before it answers: ai_wake on|off")
+async def ai_wake(ctx: Context[Bot], mode: str = "") -> None:
+    if ctx.guild is None or (chat := _active.get(ctx.guild.id)) is None:
+        await ctx.send("No AI voice chat is running here.")
+        return
+    if mode.lower() in ("on", "off"):
+        chat.session.set_wake_enabled(mode.lower() == "on")
+    state = "needs its name" if chat.session.wake_enabled else "answers everything"
+    await ctx.send(f"The bot {state}.")
 
 
 @bot.command(name="ai_reset", help="Forget the AI conversation history")
